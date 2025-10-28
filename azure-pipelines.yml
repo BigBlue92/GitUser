@@ -31,7 +31,7 @@ stages:
     - script: dotnet build --no-restore --configuration $(buildConfiguration)
       displayName: 'Build .NET'
 
-    - script: dotnet test tests/GitUser.Test -c $(buildConfiguration) --no-build --logger trx
+    - script: dotnet test Test/Test -c $(buildConfiguration) --no-build --logger trx
       displayName: 'Run .NET Tests'
 
     - task: NodeTool@0
@@ -58,7 +58,7 @@ stages:
           export ConnectionStrings__DefaultConnection="$AZURE_SQL_CONNECTIONSTRING"
           dotnet tool install --global dotnet-ef || true
           export PATH="$PATH:$HOME/.dotnet/tools"
-          dotnet ef database update -p src/GitUser.Data -s GitUser
+          dotnet ef database update -p src/Data -s GitUser
         else
           echo "AZURE_SQL_CONNECTIONSTRING not set; skipping migrations."
         fi
