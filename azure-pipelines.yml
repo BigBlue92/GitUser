@@ -1,0 +1,67 @@
+trigger:
+  branches:
+    include:
+      - main
+      - development
+      - 'feature/*'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  nodeVersion: '20'
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    steps:
+    - checkout: self
+      clean: true
+
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '8.0.x'
+
+    - script: dotnet restore
+      displayName: 'Restore .NET'
+
+    - script: dotnet build --no-restore --configuration $(buildConfiguration)
+      displayName: 'Build .NET'
+
+    - script: dotnet test tests/GitUser.Tests -c $(buildConfiguration) --no-build --logger trx
+      displayName: 'Run .NET Tests'
+
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '$(nodeVersion)'
+      displayName: 'Install Node'
+
+    - script: |
+        cd src/GitUser.Client
+        npm ci
+        npm run build -- --configuration production
+      displayName: 'Build Angular'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: 'src/GitUser.Client/dist'
+        artifactName: 'frontend'
+        publishLocation: 'Container'
+      displayName: 'Publish Frontend Artifact'
+
+    - script: |
+        if [ -n "$AZURE_SQL_CONNECTIONSTRING" ]; then
+          echo "Running EF migrations..."
+          export ConnectionStrings__DefaultConnection="$AZURE_SQL_CONNECTIONSTRING"
+          dotnet tool install --global dotnet-ef || true
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet ef database update -p src/GitUser.Data -s GitUser
+        else
+          echo "AZURE_SQL_CONNECTIONSTRING not set; skipping migrations."
+        fi
+      displayName: 'Optional: Run EF Migrations'
+      env:
+        AZURE_SQL_CONNECTIONSTRING: $(AZURE_SQL_CONNECTIONSTRING)
