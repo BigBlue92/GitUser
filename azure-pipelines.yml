@@ -31,7 +31,7 @@ stages:
     - script: dotnet build --no-restore --configuration $(buildConfiguration)
       displayName: 'Build .NET'
 
-    - script: dotnet test Test/Test.csproj -c $(buildConfiguration) --no-build --logger trx
+    - script: dotnet test -c $(buildConfiguration) --no-build --logger trx
       displayName: 'Run .NET Tests'
 
     - task: NodeTool@0
